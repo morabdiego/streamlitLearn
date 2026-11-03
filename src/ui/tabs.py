@@ -28,15 +28,15 @@ def _format_df_percentages(df: pd.DataFrame) -> pd.DataFrame:
 
 def render_tab_brecha_territorial(df_view: pd.DataFrame, raw_df: pd.DataFrame | None = None) -> None:
     """Pestaña 1: Marco muestral, brecha territorial Villas vs. Resto y acumulación de desventajas."""
-    st.subheader("🏙️ Capítulo 3: Las Condiciones de Vida en las Villas con Relación al Resto de la CABA")
+    st.subheader("Pobreza multidimensional: Análisis por dominio geográfico de la muestra")
     st.markdown("""
 > **La falacia del promedio urbano y la segregación residencial**: La CABA se caracteriza por poseer indicadores promedio de calidad de vida, salud, educación e ingresos altos respecto al resto del país (**INDEC, 2023a, 2023b**). Sin embargo, detrás del promedio general se oculta una profunda fractura socioespacial concentrada en las comunas del sur (**Sabatini et al., 2001**), donde una décima parte de la población habita en villas y asentamientos populares conviviendo con una acumulación sistemática de desventajas.
     """)
 
     # 1. Análisis del Marco Muestral (Tabla 3.1 actualizada)
-    st.markdown("### 1. El problema del marco muestral en la EAH frente al RENABAP (Tabla 3.1)")
+    st.markdown("##### 1. Brecha de representación de las villas")
     st.markdown("""
-A partir de 2019 la Encuesta Anual de Hogares (EAH) incorpora el módulo ampliado de pobreza multidimensional sobre dos marcos muestrales: **Marco 1 ("Viviendas particulares generales" / Resto de la ciudad)** y **Marco 3 ("Villas, asentamientos y NHT")**. 
+A partir de 2019 la Encuesta Anual de Hogares (EAH) incorpora el módulo ampliado de pobreza multidimensional sobre dos marcos muestrales: **Marco 4 ("Viviendas particulares generales" / Resto de la ciudad)** y **Marco 3 ("Villas, asentamientos y NHT")**.
 
 Al observar los factores de expansión muestral (`fexp`), el marco en villas obtiene una representación cercana al **3,8% – 4,0% de los hogares**, mientras que los relevamientos del **RENABAP (2022)** indican que al menos el **10,4% de la población porteña** reside en los 50 barrios populares de la Ciudad. Como advierten **Macció y Lépore (2012)** y **Marx, Stoker y Suri (2013)**, esta distorsión en el peso estadístico asignado a las villas **subestima las tasas globales de pobreza** de toda la CABA.
     """)
@@ -57,22 +57,22 @@ Al observar los factores de expansión muestral (`fexp`), el marco en villas obt
             sub_pm = df_pm_resp[df_pm_resp["dominio"] == dom_code]
             sub_all = raw_df[raw_df["dominio"] == dom_code]
             muestra_rows.append({
-                "Marco muestral": dom_label,
-                "Hogares c/ módulo PM (N)": format_integer(len(sub_pm)),
-                "% Muestra PM": format_percentage(len(sub_pm) / tot_n_pm * 100 if tot_n_pm else 0),
-                "Hogares expandidos PM": format_integer(sub_pm["fexp"].sum()),
-                "% Expandido PM": format_percentage(sub_pm["fexp"].sum() / tot_w_pm * 100 if tot_w_pm else 0),
-                "Total Hogares EAH (N)": format_integer(len(sub_all)),
-                "Total Expandido EAH": format_integer(sub_all["fexp"].sum()),
+                "Marco muestral (hogares con módulo PM)": dom_label,
+                "Muestra": format_integer(len(sub_pm)),
+                "% Muestra": format_percentage(len(sub_pm) / tot_n_pm * 100 if tot_n_pm else 0),
+                "Población": format_integer(sub_pm["fexp"].sum()),
+                "% Población": format_percentage(sub_pm["fexp"].sum() / tot_w_pm * 100 if tot_w_pm else 0),
+                # "Total Hogares EAH (N)": format_integer(len(sub_all)),
+                # "Total Expandido EAH": format_integer(sub_all["fexp"].sum()),
             })
         muestra_rows.append({
-            "Marco muestral": "Total CABA",
-            "Hogares c/ módulo PM (N)": format_integer(tot_n_pm),
-            "% Muestra PM": "100,0%",
-            "Hogares expandidos PM": format_integer(tot_w_pm),
-            "% Expandido PM": "100,0%",
-            "Total Hogares EAH (N)": format_integer(tot_n_all),
-            "Total Expandido EAH": format_integer(tot_w_all),
+            "Marco muestral (hogares con módulo PM)": "Total de hogares",
+            "Muestra": format_integer(tot_n_pm),
+            "% Muestra": "100,0%",
+            "Población": format_integer(tot_w_pm),
+            "% Población": "100,0%",
+            # "Total Hogares EAH (N)": format_integer(tot_n_all),
+            # "Total Expandido EAH": format_integer(tot_w_all),
         })
         st.dataframe(pd.DataFrame(muestra_rows), width="stretch", hide_index=True)
         st.caption(SOURCE_CAPTION)
@@ -80,13 +80,7 @@ Al observar los factores de expansión muestral (`fexp`), el marco en villas obt
     st.markdown("---")
 
     # 2. Tabla comparativa consolidada Alkire-Foster + Pobreza por Ingresos
-    st.markdown("### 2. Brecha de Pobreza Multidimensional (Alkire-Foster) y por Ingresos según Dominio")
-    st.markdown("""
-En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n$) global o por zonas geográficas (Norte, Centro y Sur), sin desagregar específicamente el marco muestral de villas ni informar la intensidad de las privaciones. Al reconstruir el cálculo mediante los índices de **Alkire y Foster (2007)** por marco muestral:
-* La **Incidencia ($H$)** y la **Pobreza por Ingresos** en las villas cuadruplican y quintuplican los registros del resto de la ciudad.
-* La **Intensidad ($A$)** revela que los hogares pobres en villas sufren un porcentaje promedio de privaciones simultáneas significativamente mayor.
-* La **Tasa de Recuento Ajustada ($M_0 = H \\times A$)** arroja una brecha de **casi 5 veces** entre ambos territorios.
-    """)
+    st.markdown("##### 2. Brecha de pobreza multidimensional y por ingresos")
 
     rows_dom = []
     dominios_presentes = [d for d in MAP_DOMINIO.values() if d in df_view["dominio_desc"].unique()]
@@ -101,14 +95,14 @@ En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n
                 else 0.0
             )
             rows_dom.append({
-                "Marco muestral / Dominio": d_nombre,
-                "Incidencia IPM (H)": format_percentage(metrics.h * 100),
+                "Marco muestral (hogares con módulo PM)": d_nombre,
+                "Pobreza multidimensional (H)": format_percentage(metrics.h * 100),
                 "Intensidad (A)": format_percentage(metrics.a * 100),
-                "IPM Ajustado (M0)": format_decimal(metrics.m0, decimales=3),
-                "Pobreza por Ingresos": format_percentage(pobre_ing),
-                "Hogares Pobres IPM (exp)": format_integer(metrics.pobres_expandidos),
-                "Total Hogares (exp)": format_integer(metrics.hogares_expandidos),
-                "Muestra (N)": format_integer(len(sub_df)),
+                "IPM (M0)": format_decimal(metrics.m0, decimales=3),
+                "Pobreza por ingresos": format_percentage(pobre_ing),
+                # "Hogares Pobres IPM (exp)": format_integer(metrics.pobres_expandidos),
+                # "Total Hogares (exp)": format_integer(metrics.hogares_expandidos),
+                # "Muestra (N)": format_integer(len(sub_df)),
             })
 
     if len(df_view) > 0:
@@ -119,19 +113,26 @@ En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n
             else 0.0
         )
         rows_dom.append({
-            "Marco muestral / Dominio": "Total selección CABA",
-            "Incidencia IPM (H)": format_percentage(m_tot.h * 100),
+            "Marco muestral (hogares con módulo PM)": "Total de hogares",
+            "Pobreza multidimensional (H)": format_percentage(m_tot.h * 100),
             "Intensidad (A)": format_percentage(m_tot.a * 100),
-            "IPM Ajustado (M0)": format_decimal(m_tot.m0, decimales=3),
-            "Pobreza por Ingresos": format_percentage(p_ing_tot),
-            "Hogares Pobres IPM (exp)": format_integer(m_tot.pobres_expandidos),
-            "Total Hogares (exp)": format_integer(m_tot.hogares_expandidos),
-            "Muestra (N)": format_integer(len(df_view)),
+            "IPM (M0)": format_decimal(m_tot.m0, decimales=3),
+            "Pobreza por ingresos": format_percentage(p_ing_tot),
+            # "Hogares Pobres IPM (exp)": format_integer(m_tot.pobres_expandidos),
+            # "Total Hogares (exp)": format_integer(m_tot.hogares_expandidos),
+            # "Muestra (N)": format_integer(len(df_view)),
         })
 
     if rows_dom:
         st.dataframe(pd.DataFrame(rows_dom), width="stretch", hide_index=True)
         st.caption(SOURCE_CAPTION)
+
+    st.markdown("""
+En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n$) global o por zonas geográficas (Norte, Centro y Sur), sin desagregar específicamente el marco muestral de villas ni informar la intensidad de las privaciones. Al reconstruir el cálculo mediante los índices de **Alkire y Foster (2007)** por marco muestral:
+* La **Incidencia ($H$)** y la **Pobreza por Ingresos** en las villas cuadruplican y quintuplican los registros del resto de la ciudad.
+* La **Intensidad ($A$)** revela que los hogares pobres en villas sufren un porcentaje promedio de privaciones simultáneas significativamente mayor.
+* La **Tasa de Recuento Ajustada ($M_0 = H \\times A$)** arroja una brecha de **casi 5 veces** entre ambos territorios.
+    """)
 
     with st.expander("📌 Comparación con los resultados originales de la Tesis (EAH 2021 vs. Actualización EAH 2025)"):
         st.markdown("""
@@ -146,7 +147,7 @@ La comparación intertemporal con los microdatos de **2025** ratifica la hipóte
     st.markdown("---")
 
     # 3. Acumulación de Desventajas: Matriz de Doble Pobreza (Tabla 3.7)
-    st.markdown("### 3. Dinámica y Acumulación de Desventajas: Pobreza por Ingresos vs. Multidimensional (Tabla 3.7)")
+    st.markdown("##### 3. Pobreza estructural")
     st.markdown("""
 **David Gordon (2006)** ilustra la dinámica de la pobreza distinguiendo las trayectorias de ingresos —altamente sensibles al ciclo económico y shocks de empleo— frente a las condiciones materiales de vida, vinculadas a la provisión de bienes públicos, infraestructura y activos del hogar. Cuando ambas carencias se superponen (**pobreza multidimensional + pobreza monetaria**), se consolida un núcleo duro de exclusión donde la informalidad del hábitat opera simultáneamente como efecto y causa reproductora de la pobreza (**Smolka, 2003; Del Castillo, 2011**).
     """)
@@ -160,17 +161,11 @@ La comparación intertemporal con los microdatos de **2025** ratifica la hipóte
 
     if overlap_dict:
         overlap_df = pd.DataFrame(overlap_dict)
-        col_chart, col_data = st.columns([1.2, 1])
-        with col_chart:
-            st.markdown("**Distribución de hogares según condición combinada de pobreza (%)**")
-            st.bar_chart(overlap_df)
-            st.caption(SOURCE_CAPTION)
 
-        with col_data:
-            st.markdown("**Cuadro comparativo de superposición de pobrezas (%)**")
-            table_overlap = _format_df_percentages(overlap_df)
-            st.dataframe(table_overlap, width="stretch")
-            st.caption(SOURCE_CAPTION)
+        st.markdown("**Cuadro comparativo de superposición de pobrezas (%)**")
+        table_overlap = _format_df_percentages(overlap_df)
+        st.dataframe(table_overlap, width="stretch")
+        st.caption(SOURCE_CAPTION)
 
     st.markdown("---")
 
