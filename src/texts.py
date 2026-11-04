@@ -1,8 +1,8 @@
 """Textos editoriales, títulos, cuadros estáticos y bibliografía de la aplicación."""
 
-PAGE_TITLE = "Pobreza Multidimensional en CABA"
-PAGE_ICON = "🏙️"
-LOADING_SPINNER = "Procesando microdatos y calculando cortes..."
+PAGE_TITLE = "Pobreza Multidimensional"
+PAGE_ICON = "📊"
+LOADING_SPINNER = "Procesando microdatos..."
 
 SOURCE_CAPTION = (
     "Fuente: Elaboración propia en base a IDECBA (2026), "
@@ -12,7 +12,8 @@ SOURCE_CAPTION = (
 # =============================================================================
 # ENCABEZADO E INTRODUCCIÓN
 # =============================================================================
-HEADER_TITLE = "Pobreza multidimensional y segregación territorial. Análisis de la EAH 2025"
+HEADER_TITLE = "Pobreza multidimensional y pobreza estructural"
+HEADER_SUBTITLE = "Análisis de los microdatos de la encuesta anual de hogares 2025 de CABA"
 HEADER_AUTHOR = "*Autor: **Mora Benitez, Diego J.** "
 HEADER_EXPANDER_TITLE = "Pobreza estructural en las villas de la Ciudad de Buenos Aires"
 

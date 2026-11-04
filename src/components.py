@@ -46,7 +46,13 @@ def _render_table(
 def render_header() -> None:
     """Renderiza el encabezado principal, autoría y marco teórico introductorio."""
     st.title(texts.HEADER_TITLE)
-    st.markdown(texts.HEADER_AUTHOR)
+    st.header(texts.HEADER_SUBTITLE)
+    # st.markdown(texts.HEADER_AUTHOR)
+    col1, col2 = st.columns([.7, .2])
+    with col1:
+        st.link_button(label="Autor: Mora Benitez, Diego J.", url="https://linktr.ee/morabdiego")
+    with col2:
+        st.link_button(label="Ver código en Github", url="https://github.com/morabdiego/streamlitlearn")
 
     with st.expander(texts.HEADER_EXPANDER_TITLE, expanded=False):
         st.markdown(texts.HEADER_THEORY_MD)
