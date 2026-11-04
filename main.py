@@ -1,71 +1,38 @@
-"""Punto de entrada principal para la aplicación de Streamlit del IPM."""
+"""Punto de entrada principal de la aplicación de Pobreza Multidimensional en CABA."""
+import pandas as pd
 import streamlit as st
 
-from src.config.constants import SOURCE_CAPTION
-from src.data.loader import load_hogares_data
-from src.domain.alkire_foster import (
-    apply_ipm_cutoffs,
-    calculate_ipm_metrics,
-    filter_ipm_dataset,
-    prepare_base_scores,
-)
-from src.ui.header import render_header
-from src.ui.metrics import render_metric_cards
-from src.ui.sidebar import render_sidebar
-from src.ui.tabs import render_analysis_tabs
+from src import texts
+from src.components import render_analysis_tabs, render_header, render_metric_cards
+from src.config import DEFAULT_K_INTER, DEFAULT_K_INTRA, DEFAULT_YEAR
+from src.logic import calculate_ipm_dataset, calculate_ipm_metrics, load_hogares_data
 
-
-# 1. Configuración de página
 st.set_page_config(
-    page_title="Pobreza Multidimensional en CABA",
-    page_icon="🏙️",
-    layout="wide",
+    page_title=texts.PAGE_TITLE,
+    page_icon=texts.PAGE_ICON,
+    layout="centered",
 )
 
 
 @st.cache_data(show_spinner=False)
-def get_cached_base_scores(anio: int):
-    """Carga los microdatos de hogares y calcula los scores dimensionales continuos."""
-    raw_df = load_hogares_data(anio)
-    return prepare_base_scores(raw_df)
+def get_ipm_data(year: int = DEFAULT_YEAR) -> pd.DataFrame:
+    """Carga los microdatos de hogares y calcula las matrices del IPM."""
+    raw_df = load_hogares_data(year)
+    return calculate_ipm_dataset(raw_df, k_intra=DEFAULT_K_INTRA, k_inter=DEFAULT_K_INTER)
 
 
 def main() -> None:
-    # 2. Barra lateral con filtros y parámetros metodológicos
-    params = render_sidebar()
+    with st.spinner(texts.LOADING_SPINNER):
+        df = get_ipm_data()
 
-    # 3. Procesamiento reactivo del IPM
-    with st.spinner("Procesando microdatos y calculando cortes..."):
-        raw_df = load_hogares_data(params.anio)
-        df_base = get_cached_base_scores(params.anio)
-        df_ipm = apply_ipm_cutoffs(
-            df_base,
-            k_intra=params.k_intra,
-            k_inter=params.k_inter,
-        )
-        df_view = filter_ipm_dataset(
-            df_ipm,
-            dominios_seleccionados=params.dominios,
-            tipos_hogar_seleccionados=params.tipos_hogar,
-        )
+    render_header()
 
-    # 4. Título, autoría y contextualización teórica
-    render_header(params.anio)
-
-    # 5. Tarjetas de métricas principales (Alkire-Foster) para la selección actual
-    metrics = calculate_ipm_metrics(df_view)
+    metrics = calculate_ipm_metrics(df)
     render_metric_cards(metrics)
-    st.caption(SOURCE_CAPTION)
+    st.caption(texts.SOURCE_CAPTION)
 
     st.divider()
-
-    # 6. Pestañas temáticas con storytelling, discusión metodológica y datos desagregados
-    render_analysis_tabs(
-        df_view=df_view,
-        k_intra=params.k_intra,
-        tipos_hogar_seleccionados=params.tipos_hogar,
-        raw_df=raw_df,
-    )
+    render_analysis_tabs(df)
 
 
 if __name__ == "__main__":

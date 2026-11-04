@@ -23,27 +23,15 @@ El tablero no es un simple visor de datos numéricos, sino una herramienta de di
 
 ```text
 streamlitLearn/
-├── eah/                           # Microdatos oficiales de la EAH (DGEyC)
+├── eah/                           # Microdatos oficiales de la EAH (IDECBA)
 ├── src/
-│   ├── config/
-│   │   └── constants.py           # Metadatos del IPM, dimensiones y mapeos
-│   ├── data/
-│   │   └── loader.py              # Carga eficiente con @st.cache_data y Pathlib
-│   ├── domain/
-│   │   ├── models.py              # Dataclasses tipadas (IPMMetrics, FilterParams)
-│   │   └── alkire_foster.py       # Algoritmos Alkire-Foster y análisis de dominio (puro Python)
-│   ├── utils/
-│   │   └── formatters.py          # Utilidades de formato numérico latino
-│   └── ui/
-│       ├── header.py              # Introducción, contexto teórico y autoría
-│       ├── sidebar.py             # Parámetros metodológicos (k-intra, k-inter) y filtros
-│       ├── metrics.py             # KPIs principales (H, A, M0, Hogares Pobres)
-│       └── tabs.py                # Pestañas temáticas con storytelling y gráficos
+│   ├── config.py                  # Parámetros metodológicos, rutas, dimensiones y mapeos
+│   ├── texts.py                   # Textos, títulos, notas, cuadros estáticos y bibliografía
+│   ├── logic.py                   # Carga de datos, cálculos Alkire-Foster y armado de tablas
+│   └── components.py              # Componentes visuales de Streamlit (encabezado, KPIs y pestañas)
 ├── tests/
-│   ├── test_domain.py             # Tests unitarios del cálculo matemático y ponderación
-│   └── test_formatters.py         # Tests de formateo numérico
-├── main.py                        # Orquestador principal
-├── load_data.py                   # Wrapper de compatibilidad hacia atrás
+│   └── test_logic.py              # Pruebas unitarias de cálculos, matrices y benchmarks EAH 2025
+├── main.py                        # Punto de entrada principal
 └── pyproject.toml
 ```
 
@@ -54,6 +42,8 @@ streamlitLearn/
 ```bash
 uv run streamlit run main.py
 ```
+
+La aplicación no muestra la barra lateral: usa por defecto el año y los cortes metodológicos configurados, e incluye todos los dominios y tipos de hogar.
 
 Para correr las pruebas unitarias:
 
