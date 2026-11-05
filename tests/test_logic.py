@@ -1,23 +1,38 @@
-"""Pruebas unitarias de los cálculos Alkire-Foster, matrices censurada/no censurada y validación EAH 2025."""
+"""Pruebas unitarias de los cálculos Alkire-Foster, matrices censurada/no censurada y validación EAH 2021 y 2025."""
 import unittest
 
 import numpy as np
 import pandas as pd
 
-from src.config import DIMENSIONES_IPM, MONITOR_FILTER_CONFIG
-from src.logic import (
+from src.config import DIMENSIONES_IPM
+from src.config_monitor import MONITOR_FILTER_CONFIG
+from src.data import (
     apply_analysis_unit,
+    filter_ipm_dataset,
+    load_hogares_data,
+    load_individuos_data,
+)
+from src.formatting import (
+    format_decimal,
+    format_integer,
+    format_percentage,
+)
+from src.ipm import (
     apply_ipm_cutoffs,
+    calculate_deprivation_distribution,
+    calculate_dimension_contributions,
+    calculate_indicator_rate,
+    calculate_ipm_dataset,
+    calculate_ipm_metrics,
+    calculate_poverty_overlap,
+    calculate_structural_habitat_rates,
+    score_dimension,
+)
+from src.tables import (
     build_deprivation_dist_table,
     build_dimension_contributions_table,
     build_domain_poverty_table,
     build_excluded_indicators_table,
-    build_flexible_deprivation_dist_table,
-    build_flexible_dimension_contributions_table,
-    build_flexible_excluded_indicators_table,
-    build_flexible_habitat_table,
-    build_flexible_indicator_rates_table,
-    build_flexible_overlap_table,
     build_flexible_poverty_table,
     build_flexible_sample_table,
     build_habitat_table,
@@ -26,20 +41,6 @@ from src.logic import (
     build_overlap_table,
     build_sample_table,
     build_structure_2025_table,
-    calculate_deprivation_distribution,
-    calculate_dimension_contributions,
-    calculate_indicator_rate,
-    calculate_ipm_dataset,
-    calculate_ipm_metrics,
-    calculate_poverty_overlap,
-    calculate_structural_habitat_rates,
-    filter_ipm_dataset,
-    format_decimal,
-    format_integer,
-    format_percentage,
-    load_hogares_data,
-    load_individuos_data,
-    score_dimension,
 )
 
 
@@ -71,14 +72,10 @@ class TestAlkireFosterCalculations(unittest.TestCase):
             "d2_score": [0.5, 0.0, 0.0],
             "fexp": [100.0, 100.0, 200.0],
         })
-        # k_intra=0.33, k_inter=1.0 (requiere las 2 dimensiones privadas)
         df = apply_ipm_cutoffs(df_scores, k_intra=0.33, k_inter=1.0, dimensiones=dims)
 
-        # Matriz no censurada: hogar 1 está privado en d1 pero no es pobre IPM (c_vector=0.5 < 1.0)
         self.assertEqual(df["d1_privada"].tolist(), [1, 1, 0])
         self.assertEqual(df["pobre_ipm"].tolist(), [1, 0, 0])
-
-        # Matriz censurada: hogar 1 pasa a 0 en d1_censurada y c_censurado
         self.assertEqual(df["d1_censurada"].tolist(), [1, 0, 0])
         self.assertEqual(df["c_censurado"].tolist(), [1.0, 0.0, 0.0])
 
@@ -90,24 +87,19 @@ class TestAlkireFosterCalculations(unittest.TestCase):
 
     def test_indicator_rate_three_modes_and_identity(self):
         df = pd.DataFrame({
-            "ind1": [1, 0, 1, 9],       # fila 3 es Ns/Nc (9) -> excluida del universo válido
+            "ind1": [1, 0, 1, 9],
             "pobre_ipm": [1, 1, 0, 1],
             "fexp": [30.0, 10.0, 60.0, 50.0],
         })
-        # Válidos (filas 0, 1, 2): peso total = 100; pobres válidos (filas 0, 1): peso = 40 (H = 0.40)
-        # 1) No censurada: privados (filas 0 y 2 = 90) / 100 = 90%
         r_uncens = calculate_indicator_rate(df, "ind1", modo="no_censurada")
         self.assertAlmostEqual(r_uncens, 90.0)
 
-        # 2) Censurada h_j(k): privado Y pobre (fila 0 = 30) / 100 = 30%
         r_cens = calculate_indicator_rate(df, "ind1", modo="censurada")
         self.assertAlmostEqual(r_cens, 30.0)
 
-        # 3) Entre hogares pobres: privado dentro de pobres (30) / total pobres válidos (40) = 75%
         r_poor = calculate_indicator_rate(df, "ind1", modo="entre_pobres")
         self.assertAlmostEqual(r_poor, 75.0)
 
-        # Identidad Alkire-Foster: h_j(k) == H_valido * tasa_entre_pobres
         h_valido = 40.0 / 100.0
         self.assertAlmostEqual(r_cens, h_valido * r_poor)
 
@@ -126,7 +118,6 @@ class TestAlkireFosterCalculations(unittest.TestCase):
         self.assertAlmostEqual(sum(overlap.values()), 100.0)
         self.assertAlmostEqual(overlap["Pobreza estructural"], 25.0)
 
-        # Con fila 3 como Ns/Nc (9), el peso válido en hábitat es 75.0
         hab = calculate_structural_habitat_rates(df)
         self.assertAlmostEqual(hab["Tenencia irregular"], 100 / 3)
         self.assertAlmostEqual(hab["Hacinamiento general (2 o más personas por cuarto)"], 200 / 3)
@@ -141,13 +132,11 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
         cls.df = calculate_ipm_dataset(cls.raw_df, df_individuos=cls.raw_ind)
 
     def test_official_idecba_2025_rates(self):
-        # Resultados oficiales publicados por IDECBA para EAH 2025
         m_total = calculate_ipm_metrics(self.df)
         m_con = calculate_ipm_metrics(self.df[self.df["tiene_nnya"] == 1])
         self.assertAlmostEqual(round(m_total.h * 100, 1), 18.8)
         self.assertAlmostEqual(round(m_con.h * 100, 1), 20.6)
 
-        # Tasas oficiales por dimensión en CABA 2025: 25,6% | 4,1% | 12,1% | 7,3% | 20,9%
         expected_dims = {
             "dimension_1": 25.6,
             "dimension_2": 4.1,
@@ -161,18 +150,15 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
             self.assertAlmostEqual(round(rate, 1), expected)
 
     def test_alkire_foster_identities_and_tables_on_real_data(self):
-        # 1. Contribuciones dimensionales suman 100%
         contribs = calculate_dimension_contributions(self.df)
         self.assertAlmostEqual(sum(contribs.values()), 100.0, places=6)
 
-        # 2. Distribución de privaciones entre pobres suma 100% y su media ponderada / 5 == A
         dist = calculate_deprivation_distribution(self.df)
         self.assertAlmostEqual(sum(dist.values()), 100.0, places=6)
         mean_dims_share = sum(k * (pct / 100.0) for k, pct in dist.items()) / len(DIMENSIONES_IPM)
         m_total = calculate_ipm_metrics(self.df)
         self.assertAlmostEqual(mean_dims_share, m_total.a, places=6)
 
-        # 3. En todos los indicadores: censurada == H_grupo * entre_pobres, y censurada <= no_censurada
         con_nnya = self.df[self.df["tiene_nnya"] == 1]
         h_con = calculate_ipm_metrics(con_nnya).h
         for dim_cfg in DIMENSIONES_IPM.values():
@@ -183,7 +169,6 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
                 self.assertLessEqual(r_cens, r_no_cens + 1e-9)
                 self.assertAlmostEqual(r_cens, h_con * r_pobres, places=6)
 
-        # 4. Construcción de todas las tablas de la interfaz
         self.assertEqual(len(build_sample_table(self.df)), 3)
         self.assertEqual(len(build_domain_poverty_table(self.df)), 3)
         self.assertEqual(len(build_overlap_table(self.df)), 4)
@@ -196,8 +181,7 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
         self.assertEqual(len(build_indicator_rates_table(self.df, tiene_nnya=1, modo="no_censurada")), 27)
         self.assertEqual(len(build_indicator_rates_table(self.df, tiene_nnya=0, modo="entre_pobres")), 17)
 
-    def test_monitor_filters_and_flexible_tables(self):
-        # Verificar recálculo de fexp a nivel personas vs hogares
+    def test_monitor_filters_and_unified_tables(self):
         df_hog = apply_analysis_unit(self.df, unidad="hogares")
         df_per = apply_analysis_unit(self.df, unidad="personas")
         m_hog = calculate_ipm_metrics(df_hog)
@@ -206,7 +190,6 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
         self.assertEqual(m_per.hogares_expandidos, 3026386)
         self.assertGreater(m_per.h, m_hog.h)
 
-        # Filtrado combinado sobre variables de hogar y del jefe/a (respondiente)
         filtered = filter_ipm_dataset(
             df_per,
             {
@@ -225,16 +208,21 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
         self.assertTrue((filtered["hog_per_0a17"] == 1).all())
         self.assertTrue((filtered["sexo"] == 2).all())
 
-        # Verificar que todas las tablas flexibles funcionan agrupando por cualquiera de las 11 variables
         for group_col in MONITOR_FILTER_CONFIG:
             self.assertGreaterEqual(len(build_flexible_sample_table(filtered, group_col, unidad="personas")), 2)
             self.assertGreaterEqual(len(build_flexible_poverty_table(filtered, group_col, unidad="personas")), 2)
-            self.assertEqual(len(build_flexible_overlap_table(filtered, group_col)), 4)
-            self.assertEqual(len(build_flexible_deprivation_dist_table(filtered, group_col)), 4)
-            self.assertEqual(len(build_flexible_dimension_contributions_table(filtered, group_col)), 5)
-            self.assertEqual(len(build_flexible_excluded_indicators_table(filtered, group_col)), 7)
-            self.assertEqual(len(build_flexible_habitat_table(filtered, group_col)), 6)
-            self.assertEqual(len(build_flexible_indicator_rates_table(filtered, group_col, tiene_nnya=None)), 27)
+            self.assertEqual(len(build_overlap_table(filtered, group_col, total_label="Total selección")), 4)
+            self.assertEqual(len(build_deprivation_dist_table(filtered, group_col, total_label="Total selección")), 4)
+            self.assertEqual(len(build_dimension_contributions_table(filtered, group_col, total_label="Total selección")), 5)
+            self.assertEqual(
+                len(build_excluded_indicators_table(filtered, group_col, include_discussion=False, total_label="Total selección (%)")),
+                7,
+            )
+            self.assertEqual(len(build_habitat_table(filtered, group_col, total_label="Total selección")), 6)
+            self.assertEqual(
+                len(build_indicator_rates_table(filtered, tiene_nnya=None, group_col=group_col, total_label="Total selección (%)")),
+                27,
+            )
 
 
 class TestEAH2021HarmonizationAndStructure(unittest.TestCase):
@@ -249,19 +237,16 @@ class TestEAH2021HarmonizationAndStructure(unittest.TestCase):
         )
 
     def test_2021_harmonized_columns_and_16_indicators_sin_nnya(self):
-        # 1. Armonización de tipoho -> tipoho_3 y parentes_2 -> sexo, estado, dh2, dh3
         for col in MONITOR_FILTER_CONFIG:
             self.assertIn(col, self.df_2021.columns)
             self.assertFalse(self.df_2021[col].isna().all())
 
-        # 2. En 2021 hogares sin menores tienen 16 indicadores (sin pm15 agua caliente en dim 3)
-        t_con_21 = build_flexible_indicator_rates_table(self.df_2021, tiene_nnya=1, year=2021)
-        t_sin_21 = build_flexible_indicator_rates_table(self.df_2021, tiene_nnya=0, year=2021)
+        t_con_21 = build_indicator_rates_table(self.df_2021, tiene_nnya=1, year=2021)
+        t_sin_21 = build_indicator_rates_table(self.df_2021, tiene_nnya=0, year=2021)
         self.assertEqual(len(t_con_21), 27)
         self.assertEqual(len(t_sin_21), 16)
         self.assertNotIn("Acceso a agua caliente", t_sin_21["Indicador"].tolist())
 
-        # 3. Métricas 2021 coherentes en hogares y personas
         m_hog_21 = calculate_ipm_metrics(apply_analysis_unit(self.df_2021, "hogares"))
         m_per_21 = calculate_ipm_metrics(apply_analysis_unit(self.df_2021, "personas"))
         self.assertAlmostEqual(round(m_hog_21.h * 100, 1), 17.5)

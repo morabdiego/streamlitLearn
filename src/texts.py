@@ -19,6 +19,16 @@ MONITOR_BETA_WARNING_MD = (
     "Ante cualquier duda, sugerencia o reporte de errores, por favor comunicarse a [morabdiego@gmail.com](mailto:morabdiego@gmail.com)."
 )
 MONITOR_FILTERS_EXPANDER_TITLE = "🔍 Filtros de microdatos y parámetros de cálculo"
+MONITOR_RESET_BUTTON = "Limpiar filtros"
+MONITOR_YEAR_LABEL = "📅 Año de relevamiento (EAH):"
+MONITOR_UNIT_LABEL = "👥 Unidad de análisis y factor de expansión (`fexp`):"
+MONITOR_GROUP_LABEL = "📊 Desagregar / cruzar las tablas por la variable:"
+MONITOR_EMPTY_WARNING = "No se encontraron hogares en la muestra que cumplan simultáneamente con los filtros seleccionados."
+MONITOR_EXC_CHECKBOX_LABEL = "Evaluar sólo en el subgrupo excluido oficialmente"
+MONITOR_EXC_CHECKBOX_HELP = (
+    "Si se activa, cada indicador se evalúa únicamente en el subgrupo (con o sin NNyA) donde fue descartado oficialmente."
+)
+MONITOR_NNYA_RADIO_LABEL = "Desglose según presencia de menores de 18 años (NNyA):"
 MONITOR_INTRO_MD = (
     "Seleccione uno o más valores en los filtros para recalcular las métricas de Alkire-Foster y "
     "todas las tablas del informe sobre ese subuniverso. Si un filtro se deja vacío (**Todos**), "
@@ -37,6 +47,50 @@ SOURCE_CAPTION = (
     "Fuente: Elaboración propia en base a IDECBA (2026), "
     "Encuesta Anual de Hogares (EAH) 2025. Base de usuarios."
 )
+
+
+def source_caption(year: int) -> str:
+    return f"Fuente: Elaboración propia en base a IDECBA, Encuesta Anual de Hogares (EAH) {year}. Base de usuarios."
+
+
+def monitor_poverty_title(group_label: str) -> str:
+    return f"**Métricas Alkire-Foster y pobreza por ingresos según {group_label}**"
+
+
+def monitor_sample_title(group_label: str) -> str:
+    return f"**Distribución de muestra y población expandida según {group_label}**"
+
+
+def monitor_overlap_title(group_label: str) -> str:
+    return f"**Pobreza estructural (IPM × ingresos) según {group_label}**"
+
+
+def monitor_deprivation_title(group_label: str) -> str:
+    return f"**Cantidad de dimensiones privadas simultáneas (hogares pobres PM) según {group_label}**"
+
+
+def monitor_contributions_title(group_label: str) -> str:
+    return f"**Contribución porcentual de cada dimensión al índice $M_0$ según {group_label}**"
+
+
+def monitor_habitat_title(group_label: str) -> str:
+    return f"**Privaciones estructurales de hábitat y vivienda según {group_label}**"
+
+
+def monitor_excluded_title(group_label: str) -> str:
+    return f"**Indicadores relevados en el módulo PM pero excluidos del índice oficial según {group_label}**"
+
+
+def monitor_indicators_unified_title(n_con: int, group_label: str, year: int) -> str:
+    return f"**Tasas de privación de los {n_con} indicadores según {group_label} (EAH {year})**"
+
+
+def monitor_tabla_11_title(n_con: int, year: int) -> str:
+    return f"Tabla 11: {n_con} indicadores para hogares con menores de 18 años (EAH {year})"
+
+
+def monitor_tabla_12_title(n_sin: int, year: int) -> str:
+    return f"Tabla 12: {n_sin} indicadores para hogares sin menores de 18 años (EAH {year})"
 
 # =============================================================================
 # ENCABEZADO E INTRODUCCIÓN
