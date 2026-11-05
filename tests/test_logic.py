@@ -4,13 +4,22 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from src.config import DIMENSIONES_IPM
+from src.config import DIMENSIONES_IPM, MONITOR_FILTER_CONFIG
 from src.logic import (
+    apply_analysis_unit,
     apply_ipm_cutoffs,
     build_deprivation_dist_table,
     build_dimension_contributions_table,
     build_domain_poverty_table,
     build_excluded_indicators_table,
+    build_flexible_deprivation_dist_table,
+    build_flexible_dimension_contributions_table,
+    build_flexible_excluded_indicators_table,
+    build_flexible_habitat_table,
+    build_flexible_indicator_rates_table,
+    build_flexible_overlap_table,
+    build_flexible_poverty_table,
+    build_flexible_sample_table,
     build_habitat_table,
     build_indicator_rates_table,
     build_nnya_summary_table,
@@ -24,10 +33,12 @@ from src.logic import (
     calculate_ipm_metrics,
     calculate_poverty_overlap,
     calculate_structural_habitat_rates,
+    filter_ipm_dataset,
     format_decimal,
     format_integer,
     format_percentage,
     load_hogares_data,
+    load_individuos_data,
     score_dimension,
 )
 
@@ -126,7 +137,8 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.raw_df = load_hogares_data(2025)
-        cls.df = calculate_ipm_dataset(cls.raw_df)
+        cls.raw_ind = load_individuos_data(2025)
+        cls.df = calculate_ipm_dataset(cls.raw_df, df_individuos=cls.raw_ind)
 
     def test_official_idecba_2025_rates(self):
         # Resultados oficiales publicados por IDECBA para EAH 2025
@@ -183,6 +195,77 @@ class TestEAH2025OfficialBenchmarks(unittest.TestCase):
         self.assertEqual(len(build_nnya_summary_table(self.df)), 2)
         self.assertEqual(len(build_indicator_rates_table(self.df, tiene_nnya=1, modo="no_censurada")), 27)
         self.assertEqual(len(build_indicator_rates_table(self.df, tiene_nnya=0, modo="entre_pobres")), 17)
+
+    def test_monitor_filters_and_flexible_tables(self):
+        # Verificar recálculo de fexp a nivel personas vs hogares
+        df_hog = apply_analysis_unit(self.df, unidad="hogares")
+        df_per = apply_analysis_unit(self.df, unidad="personas")
+        m_hog = calculate_ipm_metrics(df_hog)
+        m_per = calculate_ipm_metrics(df_per)
+        self.assertEqual(m_hog.hogares_expandidos, 1349888)
+        self.assertEqual(m_per.hogares_expandidos, 3026386)
+        self.assertGreater(m_per.h, m_hog.h)
+
+        # Filtrado combinado sobre variables de hogar y del jefe/a (respondiente)
+        filtered = filter_ipm_dataset(
+            df_per,
+            {
+                "dominio": [3],
+                "comuna": [4, 8],
+                "hog_per_0a17": [1],
+                "sexo": [2],
+                "estado": [1, 2, 3],
+                "dh2": [2],
+                "dh3": [4],
+            },
+        )
+        self.assertTrue(len(filtered) > 0)
+        self.assertTrue((filtered["dominio"] == 3).all())
+        self.assertTrue(filtered["comuna"].isin([4, 8]).all())
+        self.assertTrue((filtered["hog_per_0a17"] == 1).all())
+        self.assertTrue((filtered["sexo"] == 2).all())
+
+        # Verificar que todas las tablas flexibles funcionan agrupando por cualquiera de las 11 variables
+        for group_col in MONITOR_FILTER_CONFIG:
+            self.assertGreaterEqual(len(build_flexible_sample_table(filtered, group_col, unidad="personas")), 2)
+            self.assertGreaterEqual(len(build_flexible_poverty_table(filtered, group_col, unidad="personas")), 2)
+            self.assertEqual(len(build_flexible_overlap_table(filtered, group_col)), 4)
+            self.assertEqual(len(build_flexible_deprivation_dist_table(filtered, group_col)), 4)
+            self.assertEqual(len(build_flexible_dimension_contributions_table(filtered, group_col)), 5)
+            self.assertEqual(len(build_flexible_excluded_indicators_table(filtered, group_col)), 7)
+            self.assertEqual(len(build_flexible_habitat_table(filtered, group_col)), 6)
+            self.assertEqual(len(build_flexible_indicator_rates_table(filtered, group_col, tiene_nnya=None)), 27)
+
+
+class TestEAH2021HarmonizationAndStructure(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.raw_hog_2021 = load_hogares_data(2021)
+        cls.raw_ind_2021 = load_individuos_data(2021)
+        cls.df_2021 = calculate_ipm_dataset(
+            cls.raw_hog_2021,
+            df_individuos=cls.raw_ind_2021,
+            year=2021,
+        )
+
+    def test_2021_harmonized_columns_and_16_indicators_sin_nnya(self):
+        # 1. Armonización de tipoho -> tipoho_3 y parentes_2 -> sexo, estado, dh2, dh3
+        for col in MONITOR_FILTER_CONFIG:
+            self.assertIn(col, self.df_2021.columns)
+            self.assertFalse(self.df_2021[col].isna().all())
+
+        # 2. En 2021 hogares sin menores tienen 16 indicadores (sin pm15 agua caliente en dim 3)
+        t_con_21 = build_flexible_indicator_rates_table(self.df_2021, tiene_nnya=1, year=2021)
+        t_sin_21 = build_flexible_indicator_rates_table(self.df_2021, tiene_nnya=0, year=2021)
+        self.assertEqual(len(t_con_21), 27)
+        self.assertEqual(len(t_sin_21), 16)
+        self.assertNotIn("Acceso a agua caliente", t_sin_21["Indicador"].tolist())
+
+        # 3. Métricas 2021 coherentes en hogares y personas
+        m_hog_21 = calculate_ipm_metrics(apply_analysis_unit(self.df_2021, "hogares"))
+        m_per_21 = calculate_ipm_metrics(apply_analysis_unit(self.df_2021, "personas"))
+        self.assertAlmostEqual(round(m_hog_21.h * 100, 1), 17.5)
+        self.assertGreater(m_per_21.h, m_hog_21.h)
 
 
 if __name__ == "__main__":

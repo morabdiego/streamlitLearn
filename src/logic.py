@@ -16,10 +16,13 @@ from src.config import (
     DOMINIO_LABELS_MUESTRA,
     EPS,
     MAP_DOMINIO,
+    MONITOR_FILTER_CONFIG,
+    get_dimensiones_ipm,
 )
 from src.texts import ESTRUCTURA_2025_MATRIZ, INDICADORES_EXCLUIDOS_MODULO_PM
 
 IndicatorRateMode = Literal["no_censurada", "censurada", "entre_pobres"]
+AnalysisUnit = Literal["hogares", "personas"]
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,69 @@ def load_hogares_data(year: int | str = DEFAULT_YEAR, data_dir: Path = DATA_DIR)
     if not file_path.exists():
         raise FileNotFoundError(f"No se encontró el archivo de microdatos: {file_path}")
     return pd.read_csv(file_path, sep=";")
+
+
+def load_individuos_data(year: int | str = DEFAULT_YEAR, data_dir: Path = DATA_DIR) -> pd.DataFrame:
+    """Carga la base de individuos (personas) de la EAH para el año indicado."""
+    year_str = str(year)
+    file_path = data_dir / year_str / f"eah{year_str}_bu_ampliada_ind.txt"
+    if not file_path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo de microdatos de individuos: {file_path}")
+    return pd.read_csv(file_path, sep=";")
+
+
+def enrich_hogares_with_individuos(
+    df_hogares: pd.DataFrame,
+    df_individuos: pd.DataFrame,
+) -> pd.DataFrame:
+    """Cruza la base de hogares con la de individuos (por id + nhogar) para incorporar:
+    - cant_miembros: cantidad de integrantes del hogar
+    - fexp_hogares y fexp_personas (fexp * cant_miembros)
+    - Variables del jefe/a de hogar (parentes_5 == 1 en 2025, parentes_2 == 1 en 2021): sexo, estado, dh2, dh3.
+    - Armonización de tipoho (2021) a tipoho_3 (2025).
+    """
+    df = df_hogares.copy()
+    if "tipoho_3" not in df.columns and "tipoho" in df.columns:
+        df["tipoho_3"] = df["tipoho"]
+
+    # 1. Cantidad de integrantes por hogar (id + nhogar)
+    conteo = (
+        df_individuos.groupby(["id", "nhogar"], as_index=False)
+        .agg(cant_miembros=("miembro", "count"))
+    )
+
+    # 2. Características del jefe/a de hogar / respondiente (parentes_5 == 1 en 2025, parentes_2 == 1 en 2021)
+    col_parentes = "parentes_5" if "parentes_5" in df_individuos.columns else "parentes_2"
+    cols_jefe = [c for c in ("sexo", "estado", "dh2", "dh3") if c in df_individuos.columns]
+    jefe = (
+        df_individuos[df_individuos[col_parentes] == 1][["id", "nhogar", *cols_jefe]]
+        .drop_duplicates(subset=["id", "nhogar"])
+    )
+
+    df = df.merge(conteo, on=["id", "nhogar"], how="left")
+    df = df.merge(jefe, on=["id", "nhogar"], how="left")
+
+    df["cant_miembros"] = df["cant_miembros"].fillna(1).astype(int)
+    df["fexp_hogares"] = df["fexp"]
+    df["fexp_personas"] = df["fexp_hogares"] * df["cant_miembros"]
+    df["n_muestra"] = 1
+    return df.copy()
+
+
+def apply_analysis_unit(df: pd.DataFrame, unidad: AnalysisUnit = "hogares") -> pd.DataFrame:
+    """Ajusta el factor de expansión (fexp) y el conteo muestral según la unidad de análisis ('hogares' o 'personas')."""
+    out = df.copy()
+    if unidad == "personas":
+        if "fexp_personas" in out.columns:
+            out["fexp"] = out["fexp_personas"]
+        elif "cant_miembros" in out.columns:
+            out["fexp"] = out["fexp"] * out["cant_miembros"]
+        out["n_muestra"] = out["cant_miembros"] if "cant_miembros" in out.columns else 1
+    else:
+        if "fexp_hogares" in out.columns:
+            out["fexp"] = out["fexp_hogares"]
+        out["n_muestra"] = 1
+    return out
 
 
 def format_decimal(valor: Any, decimales: int = 1) -> str:
@@ -109,6 +175,9 @@ def prepare_base_scores(
     elif "enr_rea_pm" in df.columns:
         df = df[df["enr_rea_pm"] == 1].copy()
 
+    if "tipoho_3" not in df.columns and "tipoho" in df.columns:
+        df["tipoho_3"] = df["tipoho"]
+
     df["tiene_nnya"] = (df["hog_per_0a17"] == 1).astype(int)
     df["pobre_ingreso"] = df["i_pobreza"].isin([1, 2]).astype(int) if "i_pobreza" in df.columns else 0
     df["dominio_desc"] = df["dominio"].map(MAP_DOMINIO).fillna("Otro") if "dominio" in df.columns else "Sin especificar"
@@ -129,7 +198,7 @@ def prepare_base_scores(
         score_sin = score_dimension(df, list(dim_cfg["sin_nnya"]))
         df[f"{dim_key}_score"] = np.where(df["tiene_nnya"] == 1, score_con, score_sin)
 
-    return df
+    return df.copy()
 
 
 def apply_ipm_cutoffs(
@@ -160,17 +229,25 @@ def apply_ipm_cutoffs(
         df[f"{dim_key}_censurada"] = df[f"{dim_key}_privada"] * df["pobre_ipm"]
     df["c_censurado"] = df["c_vector"] * df["pobre_ipm"]
 
-    return df
+    return df.copy()
 
 
 def calculate_ipm_dataset(
     df_hogares: pd.DataFrame,
     k_intra: float = DEFAULT_K_INTRA,
     k_inter: float = DEFAULT_K_INTER,
-    dimensiones: dict = DIMENSIONES_IPM,
+    dimensiones: dict | None = None,
+    df_individuos: pd.DataFrame | None = None,
+    year: int = DEFAULT_YEAR,
 ) -> pd.DataFrame:
-    """Ejecuta el pipeline completo de preparación y cortes del IPM."""
-    return apply_ipm_cutoffs(prepare_base_scores(df_hogares, dimensiones), k_intra, k_inter, dimensiones)
+    """Ejecuta el pipeline completo de preparación, enriquecimiento con individuos (opcional) y cortes del IPM."""
+    dims = dimensiones if dimensiones is not None else get_dimensiones_ipm(year)
+    base_hog = (
+        enrich_hogares_with_individuos(df_hogares, df_individuos)
+        if df_individuos is not None
+        else df_hogares
+    )
+    return apply_ipm_cutoffs(prepare_base_scores(base_hog, dims), k_intra, k_inter, dims)
 
 
 def calculate_ipm_metrics(data: pd.DataFrame) -> IPMMetrics:
@@ -506,6 +583,217 @@ def build_indicator_rates_table(
                 rec[f"{d} (%)"] = format_percentage(t_dom)
             rec["Total CABA (%)"] = format_percentage(
                 calculate_indicator_rate(df_grupo, variable, modo=modo)
+            )
+            rows.append(rec)
+    return pd.DataFrame(rows)
+
+
+# =============================================================================
+# 4. FILTRADO DINÁMICO Y CONSTRUCTORES FLEXIBLES (MONITOR INTERACTIVO)
+# =============================================================================
+
+
+def filter_ipm_dataset(df: pd.DataFrame, filters: dict[str, list[int]]) -> pd.DataFrame:
+    """Filtra el DataFrame de hogares según los valores seleccionados en cada variable."""
+    out = df
+    for col, selected_codes in filters.items():
+        if selected_codes and col in out.columns:
+            out = out[out[col].isin(selected_codes)]
+    return out
+
+
+def _group_subsets(df: pd.DataFrame, group_col: str = "dominio") -> tuple[str, list[tuple[str, pd.DataFrame]]]:
+    """Devuelve la etiqueta de la variable de cruce y la lista de (etiqueta_categoría, sub_df) con datos."""
+    cfg = MONITOR_FILTER_CONFIG.get(group_col, MONITOR_FILTER_CONFIG["dominio"])
+    col_label = cfg["short_label"]
+    val_map: dict[int, str] = cfg["values"]
+
+    if group_col not in df.columns or df.empty:
+        return col_label, []
+
+    present_codes = set(df[group_col].dropna().unique())
+    subsets: list[tuple[str, pd.DataFrame]] = []
+    for code, label in val_map.items():
+        if code in present_codes:
+            sub = df[df[group_col] == code]
+            if not sub.empty:
+                subsets.append((label, sub))
+    return col_label, subsets
+
+
+def _sample_count(df: pd.DataFrame) -> int:
+    """Devuelve el tamaño muestral según la unidad activa (hogares o personas)."""
+    if df.empty:
+        return 0
+    if "n_muestra" in df.columns:
+        return int(df["n_muestra"].sum())
+    return len(df)
+
+
+def build_flexible_sample_table(
+    df: pd.DataFrame,
+    group_col: str = "dominio",
+    unidad: AnalysisUnit = "hogares",
+) -> pd.DataFrame:
+    """Tabla 2 flexible: Distribución muestral y expandida según la variable de cruce y unidad elegida."""
+    col_label, subsets = _group_subsets(df, group_col)
+    tot_n = _sample_count(df)
+    tot_w = df["fexp"].sum() if not df.empty else 0.0
+    col_exp = "Personas expandidas (N)" if unidad == "personas" else "Hogares expandidos (N)"
+    rows = []
+
+    for label, sub in subsets:
+        sub_n = _sample_count(sub)
+        sub_w = sub["fexp"].sum()
+        rows.append({
+            col_label: label,
+            "Muestra (n)": format_integer(sub_n),
+            "% Muestra": format_percentage(sub_n / tot_n * 100 if tot_n else 0),
+            col_exp: format_integer(sub_w),
+            "% Población": format_percentage(sub_w / tot_w * 100 if tot_w else 0),
+        })
+
+    if not df.empty:
+        rows.append({
+            col_label: "Total selección",
+            "Muestra (n)": format_integer(tot_n),
+            "% Muestra": "100,0%",
+            col_exp: format_integer(tot_w),
+            "% Población": "100,0%",
+        })
+    return pd.DataFrame(rows)
+
+
+def build_flexible_poverty_table(
+    df: pd.DataFrame,
+    group_col: str = "dominio",
+    unidad: AnalysisUnit = "hogares",
+) -> pd.DataFrame:
+    """Tablas 3 y 10 unificadas y flexibles: H, A, M0, pobreza por ingresos y muestra por variable de cruce."""
+    col_label, subsets = _group_subsets(df, group_col)
+    grupos = list(subsets)
+    if not df.empty:
+        grupos.append(("Total selección", df))
+
+    col_exp = "Personas expandidas (N)" if unidad == "personas" else "Hogares expandidos (N)"
+    rows = []
+    for label, sub in grupos:
+        m = calculate_ipm_metrics(sub)
+        rows.append({
+            col_label: label,
+            "Pobreza multidimensional (H)": format_percentage(m.h * 100),
+            "Intensidad (A)": format_percentage(m.a * 100),
+            "IPM (M0)": format_decimal(m.m0, decimales=3),
+            "Pobreza por ingresos": format_percentage(calculate_income_poverty_rate(sub)),
+            "Muestra (n)": format_integer(_sample_count(sub)),
+            col_exp: format_integer(m.hogares_expandidos),
+        })
+    return pd.DataFrame(rows)
+
+
+def build_flexible_overlap_table(df: pd.DataFrame, group_col: str = "dominio") -> pd.DataFrame:
+    """Tabla 4 flexible: Matriz de pobreza estructural (IPM × ingresos) por variable de cruce."""
+    _, subsets = _group_subsets(df, group_col)
+    cols = {label: calculate_poverty_overlap(sub) for label, sub in subsets}
+    if not df.empty:
+        cols["Total selección"] = calculate_poverty_overlap(df)
+    return format_df_percentages(pd.DataFrame(cols))
+
+
+def build_flexible_deprivation_dist_table(df: pd.DataFrame, group_col: str = "dominio") -> pd.DataFrame:
+    """Tabla 5 flexible: Cantidad de dimensiones privadas simultáneas (2 a 5) entre hogares pobres."""
+    _, subsets = _group_subsets(df, group_col)
+    cols = {}
+    for label, sub in subsets:
+        dist = calculate_deprivation_distribution(sub)
+        cols[label] = {f"{k} dimensiones privadas": dist[k] for k in range(2, 6)}
+    if not df.empty:
+        dist_tot = calculate_deprivation_distribution(df)
+        cols["Total selección"] = {f"{k} dimensiones privadas": dist_tot[k] for k in range(2, 6)}
+    return format_df_percentages(pd.DataFrame(cols))
+
+
+def build_flexible_dimension_contributions_table(df: pd.DataFrame, group_col: str = "dominio") -> pd.DataFrame:
+    """Tabla 7 flexible: Contribución porcentual de cada dimensión al índice M0."""
+    _, subsets = _group_subsets(df, group_col)
+    cols = {}
+    if not df.empty:
+        cols["Total selección"] = calculate_dimension_contributions(df)
+    for label, sub in subsets:
+        cols[label] = calculate_dimension_contributions(sub)
+    return format_df_percentages(pd.DataFrame(cols))
+
+
+def build_flexible_excluded_indicators_table(
+    df: pd.DataFrame,
+    group_col: str = "dominio",
+    modo: IndicatorRateMode = "no_censurada",
+    respetar_universo_excluido: bool = False,
+) -> pd.DataFrame:
+    """Tabla 8 flexible: Indicadores descartados del módulo PM evaluados sobre los datos filtrados."""
+    _, subsets = _group_subsets(df, group_col)
+    filtro_grupo = {
+        "Hogares sin NNyA": lambda sub: sub[sub["tiene_nnya"] == 0],
+        "Hogares con NNyA": lambda sub: sub[sub["tiene_nnya"] == 1],
+    }
+
+    rows = []
+    for item in INDICADORES_EXCLUIDOS_MODULO_PM:
+        var = item["variable"]
+        univ = item["universo_excluido"]
+        filtrar = filtro_grupo.get(univ, lambda sub: sub) if respetar_universo_excluido else (lambda sub: sub)
+
+        rec: dict[str, str] = {
+            "Variable": var,
+            "Indicador": item["etiqueta"],
+            "Dimensión": item["dimension"],
+            "Exclusión oficial": univ,
+        }
+        for label, sub in subsets:
+            t_sub = calculate_indicator_rate(filtrar(sub), var, modo=modo)
+            rec[f"{label} (%)"] = format_percentage(t_sub)
+        rec["Total selección (%)"] = format_percentage(
+            calculate_indicator_rate(filtrar(df), var, modo=modo)
+        )
+        rows.append(rec)
+    return pd.DataFrame(rows)
+
+
+def build_flexible_habitat_table(df: pd.DataFrame, group_col: str = "dominio") -> pd.DataFrame:
+    """Tabla 9 flexible: Indicadores estructurales de hábitat y vivienda omitidos del IPM oficial."""
+    _, subsets = _group_subsets(df, group_col)
+    cols = {label: calculate_structural_habitat_rates(sub) for label, sub in subsets}
+    if not df.empty:
+        cols["Total selección"] = calculate_structural_habitat_rates(df)
+    return format_df_percentages(pd.DataFrame(cols))
+
+
+def build_flexible_indicator_rates_table(
+    df: pd.DataFrame,
+    group_col: str = "dominio",
+    modo: IndicatorRateMode = "no_censurada",
+    tiene_nnya: int | None = None,
+    dimensiones: dict | None = None,
+    year: int = DEFAULT_YEAR,
+) -> pd.DataFrame:
+    """Tablas 11 y 12 flexibles: Tasas de privación por indicador según variable de cruce, modo y año."""
+    dims = dimensiones if dimensiones is not None else get_dimensiones_ipm(year)
+    df_base = df if tiene_nnya is None else df[df["tiene_nnya"] == tiene_nnya]
+    grupo_key = "sin_nnya" if tiene_nnya == 0 else "con_nnya"
+    _, subsets = _group_subsets(df_base, group_col)
+
+    rows = []
+    for dim_cfg in dims.values():
+        for variable, etiqueta in dim_cfg[grupo_key].items():
+            rec: dict[str, str] = {
+                "Dimensión": dim_cfg["label"],
+                "Indicador": etiqueta,
+            }
+            for label, sub in subsets:
+                t_sub = calculate_indicator_rate(sub, variable, modo=modo)
+                rec[f"{label} (%)"] = format_percentage(t_sub)
+            rec["Total selección (%)"] = format_percentage(
+                calculate_indicator_rate(df_base, variable, modo=modo)
             )
             rows.append(rec)
     return pd.DataFrame(rows)

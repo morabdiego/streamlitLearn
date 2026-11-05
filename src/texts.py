@@ -4,6 +4,35 @@ PAGE_TITLE = "Pobreza Multidimensional"
 PAGE_ICON = "📊"
 LOADING_SPINNER = "Procesando microdatos..."
 
+# =============================================================================
+# NAVEGACIÓN PRINCIPAL (SIDEBAR)
+# =============================================================================
+NAV_ANALISIS_TITLE = "Análisis de la pobreza multidimensional"
+NAV_ANALISIS_ICON = "📊"
+
+NAV_MONITOR_TITLE = "Monitor Interactivo de datos"
+NAV_MONITOR_ICON = "🎛️"
+MONITOR_HEADER_TITLE = "Monitor Interactivo de datos"
+MONITOR_SUBTITLE = "Exploración dinámica de los microdatos de la EAH (CABA)"
+MONITOR_BETA_WARNING_MD = (
+    "**Sección en desarrollo (versión de prueba):** Este monitor interactivo se encuentra actualmente en fase de testeo. "
+    "Ante cualquier duda, sugerencia o reporte de errores, por favor comunicarse a [morabdiego@gmail.com](mailto:morabdiego@gmail.com)."
+)
+MONITOR_FILTERS_EXPANDER_TITLE = "🔍 Filtros de microdatos y parámetros de cálculo"
+MONITOR_INTRO_MD = (
+    "Seleccione uno o más valores en los filtros para recalcular las métricas de Alkire-Foster y "
+    "todas las tablas del informe sobre ese subuniverso. Si un filtro se deja vacío (**Todos**), "
+    "no restringe esa variable."
+)
+
+MONITOR_EXPANDER_1 = "1. Condiciones de pobreza (H, A, M0, ingresos) y distribución muestral (Tablas 2, 3 y 10)"
+MONITOR_EXPANDER_2 = "2. Pobreza estructural: Superposición IPM × Pobreza por ingresos (Tabla 4)"
+MONITOR_EXPANDER_3 = "3. Intensidad de las privaciones: Dimensiones privadas simultáneas (Tabla 5)"
+MONITOR_EXPANDER_4 = "4. Contribución de cada dimensión al IPM M0 (Tabla 7)"
+MONITOR_EXPANDER_5 = "5. Indicadores estructurales de hábitat y vivienda omitidos del IPM (Tabla 9)"
+MONITOR_EXPANDER_6 = "6. Indicadores del módulo PM excluidos del índice oficial (Tabla 8)"
+MONITOR_EXPANDER_7 = "7. Tasas de privación por indicador en las 5 dimensiones (Tablas 11 y 12)"
+
 SOURCE_CAPTION = (
     "Fuente: Elaboración propia en base a IDECBA (2026), "
     "Encuesta Anual de Hogares (EAH) 2025. Base de usuarios."
@@ -15,10 +44,9 @@ SOURCE_CAPTION = (
 HEADER_TITLE = "Pobreza multidimensional y pobreza estructural"
 HEADER_SUBTITLE = "Análisis de los microdatos de la encuesta anual de hogares 2025 de CABA"
 HEADER_AUTHOR = "*Autor: **Mora Benitez, Diego J.** "
-HEADER_EXPANDER_TITLE = "Pobreza estructural en las villas de la Ciudad de Buenos Aires"
+HEADER_EXPANDER_TITLE = "Informalidad urbana y pobreza estructural"
 
 HEADER_THEORY_MD = """
-##### Villas, segregación urbana y trampas de pobreza
 Las definiciones convencionales suelen omitir la escala, naturaleza y localización espacial de la pobreza, subestimándola en asentamientos informales (**Mitlin y Satterthwaite, 2013**). En la CABA, las villas constituyen verdaderos **"enclaves urbanos de la pobreza"** (**Ziccardi, 1977**) marcados por la segregación residencial (**Sabatini et al., 2001**), la ocupación de tierras públicas, trama urbana irregular, alta densidad y verticalización (**UN-Habitat, 2002, 2003, 2020; Fernandes, 2011; Massidda, 2018; Suárez y Lépore, 2014**).
 
 La permanencia intergeneracional en estos territorios configura lo que las ciencias sociales denominan **pobreza persistente o estructural** (**Rofman, 2015**) y la literatura económica modela como **trampas de pobreza**:
@@ -36,47 +64,50 @@ TABLA_1_HISTORICO_VILLAS = [
     {"Año": "1991", "Población en villas": "52.608", "% sobre total CABA": "1,8%"},
     {"Año": "2001", "Población en villas": "107.422", "% sobre total CABA": "3,9%"},
     {"Año": "2010", "Población en villas": "170.054", "% sobre total CABA": "5,9%"},
-    {"Año": "2022", "Población en villas": "324.000", "% sobre total CABA": "10,4%"},
+    {"Año": "2022", "Población en villas": "324.000*", "% sobre total CABA": "10,4%"},
 ]
 TABLA_1_CAPTION = (
-    "Fuente: Elaboración propia en la tesis a partir de DGEyC, INDEC (2013) y RENABAP (2022). "
+    "(*) Nota: Este valor es una proyección en base a los datos de RENABAP"
+    ""
+    "Fuente: Elaboración propia a partir de DGEyC, INDEC (2013) y RENABAP (2022). "
     "Nota: Macció y Lépore (2012) advierten el consenso sobre el subregistro oficial en estos territorios."
 )
 
 # =============================================================================
 # TARJETAS DE MÉTRICAS PRINCIPALES (KPIs)
 # =============================================================================
-KPI_H_LABEL = "Incidencia (H)"
+KPI_H_LABEL = "Incidencia PM ($H$)"
 KPI_H_HELP = "Porcentaje de hogares pobres multidimensionales"
 
-KPI_A_LABEL = "Intensidad (A)"
+KPI_A_LABEL = "Intensidad ($A$)"
 KPI_A_HELP = "Promedio de privaciones entre los hogares identificados como pobres"
 
-KPI_M0_LABEL = "IPM (M0)"
-KPI_M0_HELP = "Tasa M0 ajustada por intensidad (H × A)"
+KPI_M0_LABEL = "IPM ($M_0$)"
+KPI_M0_HELP = "Índice de pobreza multidimensional de Alkire-Foster ($H × A$)"
 
-KPI_POBRES_LABEL = "Total de hogares pobres multidimensionales"
+KPI_POBRES_LABEL = "Hogares PM"
+KPI_POBRES_PERSONAS_LABEL = "Personas PM"
 
 # =============================================================================
 # PESTAÑAS DE NAVEGACIÓN
 # =============================================================================
 TAB_LABELS = [
-    "1. Pobreza estructural",
-    "2. ¿Cómo se calcula?",
-    "3. ¿Qué no estamos viendo?",
-    "4. Indicadores",
-    "5. Conclusiones",
+    "Pobreza multidimensional",
+    "¿Cómo se calcula?",
+    "¿Qué no estamos viendo?",
+    "Indicadores",
+    "Conclusiones",
 ]
 
 # =============================================================================
 # PESTAÑA 1: POBREZA ESTRUCTURAL Y BRECHA TERRITORIAL
 # =============================================================================
-TAB1_SUBHEADER = "Pobreza multidimensional: Análisis por dominio geográfico de la muestra"
+TAB1_SUBHEADER = "1. Pobreza multidimensional: Análisis por dominio geográfico de la muestra"
 TAB1_INTRO_MD = """
 > **La falacia del promedio urbano y la segregación residencial**: La CABA se caracteriza por poseer indicadores promedio de calidad de vida, salud, educación e ingresos altos respecto al resto del país (**INDEC, 2023a, 2023b**). Sin embargo, detrás del promedio general se oculta una profunda fractura socioespacial concentrada en las comunas del sur (**Sabatini et al., 2001**), donde una décima parte de la población habita en villas y asentamientos populares conviviendo con una acumulación sistemática de desventajas.
 """
 
-TAB1_SEC1_TITULO = "##### 1. Brecha de representación de las villas"
+TAB1_SEC1_TITULO = "##### 1.1. Brecha de representación de las villas"
 TAB1_SEC1_MD = """
 A partir de 2019 la Encuesta Anual de Hogares (EAH) incorpora el módulo ampliado de pobreza multidimensional sobre dos marcos muestrales: **Marco 4 ("Viviendas particulares generales" / Resto de la ciudad)** y **Marco 3 ("Villas, asentamientos y NHT")**.
 
@@ -84,7 +115,7 @@ Al observar los factores de expansión muestral (`fexp`), el marco en villas obt
 """
 TABLA_2_TITULO = "**Tabla 2: Distribución de muestra y muestra expandida por dominio muestral**"
 
-TAB1_SEC2_TITULO = "##### 2. Brecha de pobreza multidimensional y por ingresos"
+TAB1_SEC2_TITULO = "##### 1.2. Brecha de pobreza multidimensional y por ingresos"
 TABLA_3_TITULO = "**Tabla 3: Dominio muestral por condiciones de pobreza**"
 TAB1_SEC2_OUTRO_MD = """
 En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n$) global o por zonas geográficas (Norte, Centro y Sur), sin desagregar específicamente el marco muestral de villas ni informar la intensidad de las privaciones. Al reconstruir el cálculo mediante los índices de **Alkire y Foster (2007)** por marco muestral:
@@ -93,13 +124,13 @@ En los informes oficiales se publica únicamente la tasa de incidencia ($H = q/n
 * La **Tasa de Recuento Ajustada ($M_0 = H \\times A$)** arroja una brecha de **casi 5 veces** entre ambos territorios.
 """
 
-TAB1_SEC3_TITULO = "##### 3. Pobreza estructural"
+TAB1_SEC3_TITULO = "##### 1.3. Pobreza estructural"
 TAB1_SEC3_MD = """
 **David Gordon (2006)** ilustra la dinámica de la pobreza distinguiendo las trayectorias de ingresos —altamente sensibles al ciclo económico y shocks de empleo— frente a las condiciones materiales de vida, vinculadas a la provisión de bienes públicos, infraestructura y activos del hogar. Cuando ambas carencias se superponen (**pobreza multidimensional + pobreza monetaria**), se consolida un núcleo duro de exclusión donde la informalidad del hábitat opera simultáneamente como efecto y causa reproductora de la pobreza (**Smolka, 2003; Del Castillo, 2011**).
 """
 TABLA_4_TITULO = "**Tabla 4: Pobreza estructural por dominio muestral**"
 
-TAB1_SEC4_TITULO = "##### 4. Intensidad de las privaciones - Dimensiones"
+TAB1_SEC4_TITULO = "##### 1.4. Intensidad de las privaciones - Dimensiones"
 TAB1_SEC4_MD = """
 Al observar la distribución interna de los hogares identificados como pobres multidimensionales:
 * En el **Resto de la ciudad**, más de la mitad de los hogares pobres se concentran exactamente sobre el umbral mínimo de corte ($2$ dimensiones privadas).
@@ -110,7 +141,7 @@ TABLA_5_TITULO = "**Tabla 5: Cantidad de privaciones - Hogares pobres multidimen
 # =============================================================================
 # PESTAÑA 2: DISCUSIÓN METODOLÓGICA (¿CÓMO SE CALCULA?)
 # =============================================================================
-TAB2_SUBHEADER = "Métodos para medir pobreza multidimensional"
+TAB2_SUBHEADER = "2. Métodos para medir pobreza multidimensional"
 TAB2_INTRO_MD = """
 La **CEPAL (2013)** y los institutos de estadística de la región impulsaron mediciones multidimensionales de bienestar complementarias al ingreso.
 Mientras casi toda América Latina adoptó adaptaciones del método de **Alkire y Foster (2007)** de la *Oxford Poverty and Human Development Initiative* (**OPHI**) —con el caso singular de **México (CONEVAL, 2019)**
@@ -118,7 +149,7 @@ Mientras casi toda América Latina adoptó adaptaciones del método de **Alkire 
 """
 
 TAB2_CONSENSUAL_WARNING_MD = """
-#### 5. Pobreza multidimensional en CABA: El método consensual (Gordon, 2006; Mack y Lansley, 1985)
+#### 2.1. Pobreza multidimensional en CABA: El método consensual (Gordon, 2006; Mack y Lansley, 1985)
 * **Fundamento**: Basada en la concepción de pobreza relativa de **Townsend (1979, 2003)** y **Guio et al. (2017)** en el Reino Unido y la Unión Europea. Busca sustraer la definición de pobreza del juicio arbitrario de expertos para someterla a una representación "democrática" de la sociedad.
 * **Etapas de cálculo en CABA (**DGEyC, 2021b**)**:
   1. *Consenso social*: Se consulta qué ítems son necesarios para vivir dignamente en CABA (umbral de acuerdo social) y se contabilizan sólo las carencias ocurridas *por falta de recursos económicos*.
@@ -132,7 +163,7 @@ TAB2_CONSENSUAL_WARNING_MD = """
 """
 
 TAB2_AF_INFO_MD = """
-#### 6. Una metodología alternativa: El índice de pobreza multidimensional de Alkire-Foster
+#### 2.2. Una metodología alternativa: El índice de pobreza multidimensional de Alkire-Foster
 * **Fundamento**: Basada en el enfoque de capacidades de **Sen (1983, 1999)** y en la idea de núcleo irreductible de pobreza (pobreza absoluta), derechos humanos (**Florio y Labrunée, 2021**) y la familia de medidas FGT (**Foster, Greer y Thorbecke, 1984**). Adoptada oficialmente en Colombia (**DANE, 2023**), Costa Rica (**INEC, 2015**) y República Dominicana (**SIUBEN, 2017**).
 * **Identificación**: Mediante dobrel umbral
 * **Medidas agregadas y propiedades (**Hernández Téllez y Macció, 2020; Santos, 2019**)**:
@@ -142,7 +173,7 @@ TAB2_AF_INFO_MD = """
 * **Desafío**: La selección de dimensiones, ponderaciones y umbrales requiere criterios normativos explícitos (**Macció y Mitchell, 2019; Santos, 2019**).
 """
 
-TAB2_SEC7_TITULO = "#### 7. Indicadores y dimensiones de la medición IDECBA 2025"
+TAB2_SEC7_TITULO = "#### 2.3. Indicadores y dimensiones de la medición IDECBA 2025"
 TABLA_6_TITULO = "**Tabla 6: Dimensiones e indicadores finales. EAH 2025**"
 
 _AMBOS, _SOLO_CON = (True, True), (False, True)
@@ -186,7 +217,7 @@ ESTRUCTURA_2025_MATRIZ = {
     },
 }
 
-TAB2_SEC8_TITULO = "#### 8. Análisis de contribución mediante IPM $M_0$"
+TAB2_SEC8_TITULO = "#### 2.4. Análisis de contribución mediante IPM $M_0$"
 TAB2_SEC8_MD = """
 Gracias a la propiedad de descomponibilidad de **Alkire y Foster (2007)** sobre la matriz censurada, podemos descomponer qué peso relativo tiene cada dimensión en la conformación de la pobreza multidimensional ($M_0$) de cada territorio.
 Las pobreza multidimensional en villas se explica en mayor medida que en el resto de la ciudad por las dimensiones 2, 3 y 5. La presencia de comedores comunitarios alivian el 1.
@@ -196,14 +227,14 @@ TABLA_7_TITULO = "**Tabla 7: Contribución por dimensión según dominio muestra
 # =============================================================================
 # PESTAÑA 3: DISCUSIÓN DE INDICADORES (¿QUÉ NO ESTAMOS VIENDO?)
 # =============================================================================
-TAB3_SUBHEADER = "¿Que indicadores se estan considerando y cuáles faltan?"
+TAB3_SUBHEADER = "3. ¿Que indicadores se estan considerando y cuáles faltan?"
 TAB3_INTRO_MD = """
 En el diseño oficial de la CABA se utilizan **5 dimensiones**: *(1) Alimentación, (2) Salud y cuidados, (3) Vivienda y servicios, (4) Equipamiento del hogar y (5) Privación social y educación*. Sin embargo, al someter cada indicador anualmente a consenso y pruebas estadísticas de validez y confiabilidad por subgrupo, quedaron **17 indicadores para hogares sin menores de 18 años** y **27 indicadores para hogares con menores de 18 años** (Tabla 3.2 de la tesis).
 
 Este procedimiento estadístico genera **tres grandes problemas metodológicos y de diagnóstico** cuando se analiza la realidad de las villas:
 """
 
-TAB3_SEC9_TITULO = "#### 9. Indicadores relevados en el módulo de PM pero excluidos por filtros estadísticos"
+TAB3_SEC9_TITULO = "##### 3.1. Indicadores relevados en el módulo de PM pero excluidos por filtros estadísticos"
 TAB3_SEC9_MD = """
 En la propia base de datos del módulo de Pobreza Multidimensional de la EAH existen preguntas que fueron relevadas en campo, pero **fueron descartadas total o parcialmente del cálculo del índice** por no superar las pruebas estadísticas de validez/confiabilidad en el promedio de la ciudad:
 * **La exclusión de la conexión eléctrica formal (`pm21`) en hogares sin NNyA**: En el *Resto de la ciudad*, sólo el **0,1%** de los hogares sin menores carece de medidor eléctrico formal, por lo que el test estadístico global descarta la variable para ese grupo. ¡Pero en las **Villas**, el **47,0%** de los hogares sin menores sufre esta carencia (y el **69,8%** en hogares con menores)! Al excluirla, un hogar adulto en una villa sin medidor eléctrico no suma privación en *Vivienda y servicios*.
@@ -289,7 +320,7 @@ INDICADORES_EXCLUIDOS_MODULO_PM = [
     },
 ]
 
-TAB3_SEC10_TITULO = "### 10. El gran ausente: hábitat, saneamiento básico, hacinamiento y régimen de tenencia"
+TAB3_SEC10_TITULO = "##### 3.2. El gran ausente: hábitat, saneamiento básico, hacinamiento y régimen de tenencia"
 TAB3_SEC10_MD = """
 Como advierten **Macció y Mitchell (2023)**, la segregación residencial oculta las Necesidades Básicas Insatisfechas (NBI) bajo un enfoque relativo diseñado para las clases medias urbanas. La definición operativa del **RENABAP (2022)** identifica a un barrio popular por tres carencias estructurales: **irregularidad en la tenencia del suelo, falta de red cloacal formal y falta de agua corriente o energía eléctrica con medidor**.
 
@@ -304,14 +335,14 @@ TABLA_9_NOTA_CLOACA = (
 # =============================================================================
 # PESTAÑA 4: DETALLE DE INDICADORES
 # =============================================================================
-TAB4_SUBHEADER = "Detalle de indicadores"
-TAB4_SEC11_TITULO = "#### 11. Menores a cargo dentro del hogar"
+TAB4_SUBHEADER = "4. Detalle de indicadores"
+TAB4_SEC11_TITULO = "##### 4.1. Menores a cargo dentro del hogar"
 TAB4_SEC11_MD = """
 Los hogares con presencia de menores de 18 años enfrentan mayores exigencias de cuidado, espacio habitacional, equipamiento educativo y nutrición, registrando una incidencia de pobreza multidimensional significativamente más elevada que los hogares sin menores.
 """
 TABLA_10_TITULO = "**Tabla 10: Pobreza multidimensional según presencia de NNyA**"
 
-TAB4_SEC12_TITULO = "### 12. Tasas de privación por indicador según dominio muestral"
+TAB4_SEC12_TITULO = "##### 4.2. Tasas de privación por indicador según dominio muestral"
 TAB4_RADIO_LABEL = "Modo de cálculo de las tasas por indicador:"
 TABLA_11_TITULO = "Tabla 11: 27 indicadores para hogares con menores de 18 años"
 TABLA_12_TITULO = "Tabla 12: 17 indicadores para hogares sin menores de 18 años"
@@ -319,9 +350,9 @@ TABLA_12_TITULO = "Tabla 12: 17 indicadores para hogares sin menores de 18 años
 # =============================================================================
 # PESTAÑA 5: CONCLUSIONES, ANEXO RENABAP Y BIBLIOGRAFÍA
 # =============================================================================
-TAB5_SUBHEADER = "Conclusiones, anexos y bibliografía consultada"
+TAB5_SUBHEADER = "5. Conclusiones, anexos y bibliografía consultada"
 TAB5_CONCLUSIONES_MD = """
-##### 13. ¿Por qué la ciudad no difunde estos resultados y como podriamos mejorar la medición?
+##### 5.1. ¿Por qué la ciudad no difunde estos resultados y como podriamos mejorar la medición?
 
 La iniciativa de elaborar estadísticas oficiales sobre pobreza multidimensional en la CABA constituye un avance valioso frente a la ausencia de un IPM oficial a nivel nacional en la Argentina.
 Pese al gran avance, no hay registros de que estas medidas sean utilizadas para objetivos de política pública, y tampoco hay difusión del desagregado entre villas y resto de la ciudad de las estadísticas oficiales, por más que existan los microdatos, no es de acceso masivo.
