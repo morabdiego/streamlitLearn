@@ -127,7 +127,7 @@ MONITOR_FILTER_CONFIG: dict[str, dict] = {
     },
     "hacinam_2": {
         "label": "Condición de hacinamiento (hacinam_2)",
-        "short_label": "Hacinamiento",
+        "short_label": "Condición de hacinamiento",
         "values": MAP_HACINAM_2,
     },
     "tipoho_3": {
@@ -137,7 +137,7 @@ MONITOR_FILTER_CONFIG: dict[str, dict] = {
     },
     "i_pobreza": {
         "label": "Situación de pobreza por ingresos (i_pobreza)",
-        "short_label": "Pobreza por ingresos",
+        "short_label": "Situación de pobreza por ingresos",
         "values": MAP_I_POBREZA,
     },
     "hog_per_0a17": {

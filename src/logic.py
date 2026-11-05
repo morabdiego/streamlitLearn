@@ -679,15 +679,17 @@ def build_flexible_poverty_table(
     rows = []
     for label, sub in grupos:
         m = calculate_ipm_metrics(sub)
-        rows.append({
+        row: dict[str, str] = {
             col_label: label,
             "Pobreza multidimensional (H)": format_percentage(m.h * 100),
             "Intensidad (A)": format_percentage(m.a * 100),
             "IPM (M0)": format_decimal(m.m0, decimales=3),
-            "Pobreza por ingresos": format_percentage(calculate_income_poverty_rate(sub)),
-            "Muestra (n)": format_integer(_sample_count(sub)),
-            col_exp: format_integer(m.hogares_expandidos),
-        })
+        }
+        if group_col != "i_pobreza":
+            row["Pobreza por ingresos"] = format_percentage(calculate_income_poverty_rate(sub))
+        row["Muestra (n)"] = format_integer(_sample_count(sub))
+        row[col_exp] = format_integer(m.hogares_expandidos)
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
